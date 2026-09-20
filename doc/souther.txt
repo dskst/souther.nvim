@@ -1,0 +1,104 @@
+*souther.txt*  Neovim support for the Souther language
+
+Author:  Daisuke Sato
+License: MIT
+
+==============================================================================
+CONTENTS                                                    *souther-contents*
+
+  1. Introduction ............................... |souther-introduction|
+  2. Requirements ............................... |souther-requirements|
+  3. Setup ...................................... |souther-setup|
+  4. Options .................................... |souther-options|
+  5. Server discovery ........................... |souther-server|
+  6. Highlighting ............................... |souther-highlight|
+
+==============================================================================
+1. INTRODUCTION                                         *souther-introduction*
+
+souther.nvim registers the `souther` filetype for `.sou` files, sets the
+buffer options that match the official VS Code extension, and enables
+`souther-lsp` through |vim.lsp.config()|. Highlighting, diagnostics,
+completion, hover, go-to-definition, rename, code actions and formatting all
+come from the server.
+
+No syntax file or Tree-sitter grammar is bundled: the server's semantic
+tokens cover keywords, strings, numbers, comments and operators, as well as
+context-aware identifier roles.
+
+==============================================================================
+2. REQUIREMENTS                                         *souther-requirements*
+
+- Neovim 0.11 or later.
+- The `souther` command line on `PATH`, which bundles the language server: >sh
+    brew install souther-lang/souther/souther
+<
+  or a `souther-lsp.jar` from a release plus a JDK 25 (see |souther-options|).
+
+==============================================================================
+3. SETUP                                                       *souther-setup*
+
+Installing the plugin is enough. With lazy.nvim: >lua
+    { "dskst/souther.nvim" }
+<
+Calling `setup()` is optional and only needed to change an option: >lua
+    require("souther").setup({
+      jar = "~/tools/souther-lsp.jar",
+      adequacy = "witness",
+    })
+<
+Further client tweaks go through the standard mechanism, before the first
+`.sou` buffer is opened: >lua
+    vim.lsp.config("souther", {
+      on_attach = function(client, bufnr) end,
+    })
+<
+==============================================================================
+4. OPTIONS                                                   *souther-options*
+
+                                                         *souther-options-jar*
+jar ~
+    Path to `souther-lsp.jar`. When set, the server is launched as
+    `java -Xss4m -jar <jar>` and `souther lsp` is not tried.
+    Default: `nil`.
+
+                                                        *souther-options-java*
+java ~
+    Java executable used with `jar`. Default: `"java"` from `PATH`.
+
+                                                    *souther-options-adequacy*
+adequacy ~
+    How much of what `example` rows cover the server measures. One of
+    `"off"`, `"witness"`, `"all"`. Changing it takes effect on the next
+    server start (|:LspRestart|). Default: `"off"`.
+
+==============================================================================
+5. SERVER DISCOVERY                                           *souther-server*
+
+The launch command is resolved every time a client starts:
+
+1. `jar` is set              -> `java -Xss4m -jar <jar>`
+2. `souther` is on `PATH`    -> `souther lsp`
+3. otherwise                 -> a one-time warning with install hints, then
+                                `souther lsp` (Neovim reports the spawn
+                                failure; the buffer stays editable)
+
+Because resolution happens at client start, installing `souther` after
+Neovim is running only needs |:LspRestart|.
+
+Root directory: the nearest ancestor holding `pom.xml`, `build.gradle.kts`
+or `build.gradle`, falling back to `.git`. souther-lsp resolves names across
+modules from this root.
+
+==============================================================================
+6. HIGHLIGHTING                                            *souther-highlight*
+
+Semantic tokens are applied to the standard |lsp-semantic-highlight| groups
+(`@lsp.type.keyword`, `@lsp.type.string`, `@lsp.type.type`, ...), which link
+to the `@keyword`, `@string`, `@type` captures every colorscheme already
+handles. To override one for Souther only: >lua
+    vim.api.nvim_set_hl(0, "@lsp.type.typeParameter.souther", { link = "@type" })
+<
+Use |:Inspect| on a token to see which group it received.
+
+vim:tw=78:ts=8:ft=help:norl:
