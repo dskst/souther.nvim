@@ -3,8 +3,8 @@
 
 local eq = assert.are.same
 
-local souther = require("souther")
 local health = require("souther.health")
+local server = require("souther.server")
 
 local report
 local original_health = vim.health
@@ -45,9 +45,13 @@ local function has(level, pattern)
   return false
 end
 
+local function set_cmd(cmd)
+  vim.lsp.config("souther", { cmd = cmd })
+end
+
 describe("health", function()
   before_each(function()
-    souther.options = { java = nil, jar = nil, adequacy = "off" }
+    set_cmd(vim.deepcopy(server.DEFAULT_CMD))
     stub_health()
   end)
 
@@ -56,6 +60,7 @@ describe("health", function()
     vim.fn.executable = original_executable
     vim.fn.exepath = original_exepath
     package.loaded["souther.health"] = nil
+    set_cmd(vim.deepcopy(server.DEFAULT_CMD))
   end)
 
   it("reports ok when souther is on PATH", function()
@@ -66,8 +71,8 @@ describe("health", function()
       return "/opt/homebrew/bin/souther"
     end
     health.check()
+    assert.truthy(has("info", "cmd: souther lsp"))
     assert.truthy(has("ok", "/opt/homebrew/bin/souther"))
-    assert.truthy(has("info", "souther lsp"))
     assert.is_false(vim.tbl_contains(levels(), "error"))
   end)
 
@@ -80,7 +85,7 @@ describe("health", function()
   end)
 
   it("errors when the configured jar does not exist", function()
-    souther.setup({ jar = "/nonexistent/souther-lsp.jar" })
+    set_cmd(server.jar_cmd("/nonexistent/souther-lsp.jar"))
     vim.fn.executable = function()
       return 0
     end
@@ -92,7 +97,7 @@ describe("health", function()
   it("accepts an existing jar", function()
     local jar = vim.fn.tempname() .. ".jar"
     vim.fn.writefile({ "" }, jar)
-    souther.setup({ jar = jar })
+    set_cmd(server.jar_cmd(jar))
     vim.fn.executable = function()
       return 0
     end
@@ -100,13 +105,24 @@ describe("health", function()
     assert.truthy(has("ok", jar))
   end)
 
+  it("names a custom cmd that cannot be run", function()
+    set_cmd({ "souther-lsp-wrapper", "--stdio" })
+    vim.fn.executable = function()
+      return 0
+    end
+    health.check()
+    assert.truthy(has("info", "cmd: souther-lsp-wrapper --stdio"))
+    assert.truthy(has("error", "not executable: souther-lsp-wrapper"))
+  end)
+
   it("always reports the adequacy option", function()
-    souther.setup({ adequacy = "witness" })
+    vim.lsp.config("souther", { init_options = { souther = { adequacy = "witness" } } })
     vim.fn.executable = function()
       return 0
     end
     health.check()
     assert.truthy(has("info", "adequacy: witness"))
+    vim.lsp.config("souther", { init_options = { souther = { adequacy = "off" } } })
   end)
 
   it("reports the Neovim version", function()
@@ -116,5 +132,22 @@ describe("health", function()
     health.check()
     eq("start", report[1][1])
     eq("Neovim", report[1][2])
+  end)
+
+  it("reports the workspace root of the current buffer", function()
+    local base = vim.fs.normalize(vim.fn.tempname())
+    vim.fn.mkdir(base .. "/proj/src/main/souther", "p")
+    vim.fn.writefile({ "" }, base .. "/proj/pom.xml")
+    local path = base .. "/proj/src/main/souther/a.sou"
+    vim.fn.writefile({ "// x" }, path)
+    vim.cmd.edit(path)
+    local buf = vim.api.nvim_get_current_buf()
+
+    vim.fn.executable = function()
+      return 0
+    end
+    health.check()
+    assert.truthy(has("ok", "root: " .. base .. "/proj"))
+    vim.cmd.bwipeout({ buf, bang = true })
   end)
 end)

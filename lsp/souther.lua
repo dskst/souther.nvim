@@ -1,20 +1,20 @@
 -- Language server definition for `vim.lsp.config`.
 --
--- This file is read lazily by Neovim when the `souther` config is first
--- accessed, i.e. when the first `.sou` buffer is opened. The server command
--- is resolved inside `cmd` on every client start so that PATH changes and
--- `require("souther").setup()` calls made after startup are honored.
-
-local server = require("souther.server")
+-- Read lazily by Neovim when the `souther` config is first accessed, i.e. when
+-- the first `.sou` buffer is opened. Everything here is plain data so that it
+-- merges predictably with a user's own `vim.lsp.config("souther", ...)` and
+-- with nvim-lspconfig, should this definition be upstreamed.
+--
+-- `cmd` is a list rather than a function on purpose: a function would have to
+-- re-implement `cmd_env`, `cmd_cwd` and the "not executable" report that
+-- Neovim already does, and it hides the command from `:checkhealth vim.lsp`.
 
 return {
-  cmd = function(dispatchers, config)
-    local argv = server.argv()
-    return vim.lsp.rpc.start(argv, dispatchers, { cwd = config.cmd_cwd })
-  end,
+  cmd = vim.deepcopy(require("souther.server").DEFAULT_CMD),
   filetypes = { "souther" },
-  -- Build files take priority over `.git`: souther-lsp resolves names across
-  -- modules from the workspace root, and a monorepo's `.git` is too wide.
-  root_markers = { { "pom.xml", "build.gradle.kts", "build.gradle" }, ".git" },
+  -- souther-lsp compiles every `.sou` under its root as one module set and
+  -- does not read build files, so the widest sane boundary is wanted. See
+  -- `lua/souther/root.lua` for why this is a function and not `root_markers`.
+  root_dir = require("souther.root").root_dir,
   init_options = { souther = { adequacy = "off" } },
 }

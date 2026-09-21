@@ -5,6 +5,11 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+  # souther-lsp moves independently of this plugin, so the integration job
+  # runs on a schedule too: a breaking change upstream should surface here
+  # before a release, not because of one.
+  schedule:
+    - cron: "0 3 * * 1"
 
 # Least privilege: nothing here writes to the repository.
 permissions:
@@ -23,10 +28,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: v2.5.2
-          args: --check lua plugin ftplugin lsp tests
+          args: --check lua plugin ftplugin ftdetect lsp tests
       - uses: lunarmodules/luacheck@cc089e3f65acdd1ef8716cc73a3eca24a6b845e4 # v1.2.0
         with:
-          args: lua plugin ftplugin lsp tests
+          args: lua plugin ftplugin ftdetect lsp tests
 
   test:
     runs-on: ubuntu-latest
@@ -43,10 +48,10 @@ jobs:
       - name: Run unit tests
         run: make test
 
-  # Runs against a real souther-lsp. Only on tags so the default CI stays
-  # JDK-free. Requires souther's Homebrew tap to resolve on the runner.
+  # Runs against a real souther-lsp. Not on every push, so the default CI
+  # stays JDK-free. Requires souther's Homebrew tap to resolve on the runner.
   integration:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0

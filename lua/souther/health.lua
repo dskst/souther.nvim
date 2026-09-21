@@ -1,8 +1,9 @@
 --- `:checkhealth souther`
 ---
---- Reports the things that usually go wrong in the field: Neovim version,
---- whether a server can be launched (and how), and the Java runtime when
---- the jar route is in use. Nothing here starts the server.
+--- Reports the things that usually go wrong in the field: Neovim version, the
+--- command the client will actually run (and whether it can run), the Java
+--- runtime when a jar is configured, and the workspace root the current buffer
+--- would be given. Nothing here starts the server.
 local M = {}
 
 local health = vim.health
@@ -38,6 +39,27 @@ local function java_major(java)
   return tonumber(major), first
 end
 
+--- The effective `souther` client config, or nil when it cannot be read.
+---@return table|nil
+local function config()
+  local ok, conf = pcall(function()
+    return vim.lsp.config.souther
+  end)
+  return ok and conf or nil
+end
+
+--- The jar path in a `cmd`, when the command is a `java -jar` invocation.
+---@param cmd string[]
+---@return string|nil
+local function jar_of(cmd)
+  for i, arg in ipairs(cmd) do
+    if arg == "-jar" then
+      return cmd[i + 1]
+    end
+  end
+  return nil
+end
+
 local function check_neovim()
   health.start("Neovim")
   if vim.fn.has("nvim-0.11") == 1 then
@@ -52,21 +74,20 @@ local function check_neovim()
   end
 end
 
-local function check_jar(opts)
-  local jar = vim.fn.expand(opts.jar)
-  if vim.fn.filereadable(jar) == 1 then
+local function check_jar(cmd, jar)
+  if vim.fn.filereadable(vim.fn.expand(jar)) == 1 then
     health.ok("jar: " .. jar)
   else
     health.error("jar not found: " .. jar, {
-      "Fix the path in require('souther').setup({ jar = ... })",
-      "Or unset it to use `souther lsp` from PATH",
+      "Fix the path passed to require('souther').jar_cmd()",
+      "Or drop the `cmd` override to use `souther lsp` from PATH",
     })
   end
 
-  local java = opts.java or "java"
+  local java = cmd[1]
   if vim.fn.executable(java) ~= 1 then
     health.error("java not executable: " .. java, {
-      "Install a JDK 25 or set require('souther').setup({ java = '/path/to/java' })",
+      "Install a JDK 25, or pass { java = '/path/to/java' } to jar_cmd()",
     })
     return
   end
@@ -79,45 +100,84 @@ local function check_jar(opts)
   else
     health.error("java: " .. (line or java), {
       "souther-lsp.jar is built for Java 25; this runtime cannot load it",
-      "Point `java` at a JDK 25 or use `souther lsp`, which brings its own runtime",
+      "Point `java` at a JDK 25, or use `souther lsp`, which brings its own runtime",
     })
   end
 end
 
 local function check_server()
   health.start("Language server")
-  local opts = require("souther").options
 
-  if opts.jar and opts.jar ~= "" then
-    health.info("launch: java -Xss4m -jar <jar> (configured via setup)")
-    check_jar(opts)
+  local conf = config()
+  if conf == nil then
+    health.error("the `souther` LSP config could not be read", {
+      "Check that lsp/souther.lua is on the runtimepath",
+    })
     return
   end
 
-  if vim.fn.executable("souther") == 1 then
-    local path = vim.fn.exepath("souther")
-    local version = run({ "souther", "version" })
-    health.ok("souther: " .. path .. (version and (" (" .. version .. ")") or ""))
-    health.info("launch: souther lsp")
+  local cmd = conf.cmd
+  if type(cmd) ~= "table" then
+    health.warn("cmd is a " .. type(cmd) .. ", so it cannot be checked here")
     return
   end
 
-  health.error("`souther` is not on PATH and no jar is configured", {
-    "brew install souther-lang/souther/souther",
-    "or: require('souther').setup({ jar = '/path/to/souther-lsp.jar' })",
-  })
+  health.info("cmd: " .. table.concat(cmd, " "))
+
+  local jar = jar_of(cmd)
+  if jar then
+    check_jar(cmd, jar)
+    return
+  end
+
+  local exe = cmd[1]
+  if vim.fn.executable(exe) == 1 then
+    local path = vim.fn.exepath(exe)
+    local version = exe == "souther" and run({ exe, "version" }) or nil
+    health.ok(exe .. ": " .. path .. (version and (" (" .. version .. ")") or ""))
+    return
+  end
+
+  if require("souther.server").is_default_cmd(cmd) then
+    health.error("`souther` is not on PATH and no jar is configured", {
+      "brew install souther-lang/souther/souther",
+      "or: vim.lsp.config('souther', { cmd = require('souther').jar_cmd('/path/to/souther-lsp.jar') })",
+    })
+  else
+    health.error("not executable: " .. exe, {
+      "Fix the `cmd` passed to vim.lsp.config('souther', ...)",
+    })
+  end
 end
 
-local function check_options()
-  health.start("Options")
-  local opts = require("souther").options
-  health.info("adequacy: " .. tostring(opts.adequacy))
+local function check_workspace()
+  health.start("Workspace")
+
+  local conf = config()
+  local adequacy = vim.tbl_get(conf or {}, "init_options", "souther", "adequacy")
+  health.info("adequacy: " .. tostring(adequacy))
+
+  local name = vim.api.nvim_buf_get_name(0)
+  if vim.bo.filetype ~= "souther" or name == "" then
+    health.info("root: open a .sou file to see the root it resolves to")
+    return
+  end
+
+  local root = require("souther.root").find(name)
+  if root then
+    health.ok("root: " .. root)
+  else
+    health.warn("root: none found; the server would run without a workspace", {
+      "souther-lsp resolves imports only among the .sou files under its root",
+      "Add a build file (pom.xml, settings.gradle, ...) or a .git at the project top",
+    })
+  end
 end
 
 function M.check()
   check_neovim()
   check_server()
-  check_options()
+  check_workspace()
 end
 
 return M

@@ -29,5 +29,7 @@ vim.opt.runtimepath:append(plenary)
 
 -- 'loadplugins' is off, so enable filetype detection and ftplugins by hand.
 vim.cmd("filetype plugin indent on")
+vim.cmd("syntax enable")
+vim.cmd("runtime! ftdetect/*.lua")
 vim.cmd("runtime plugin/plenary.vim")
 vim.cmd("runtime plugin/souther.lua")

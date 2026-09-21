@@ -15,8 +15,8 @@ test-integration:
 		-c "PlenaryBustedDirectory tests/integration { minimal_init = '$(MINIMAL_INIT)', sequential = true }"
 
 lint:
-	luacheck lua plugin ftplugin lsp tests
-	stylua --check lua plugin ftplugin lsp tests
+	luacheck lua plugin ftplugin ftdetect lsp tests
+	stylua --check lua plugin ftplugin ftdetect lsp tests
 
 format:
-	stylua lua plugin ftplugin lsp tests
+	stylua lua plugin ftplugin ftdetect lsp tests
