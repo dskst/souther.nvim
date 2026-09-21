@@ -12,4 +12,5 @@ All notable changes to this project are documented here. The format follows
 - `souther-lsp` wiring via `vim.lsp.config`, launched as `souther lsp` from
   `PATH` or as `java -Xss4m -jar` when a jar is configured.
 - `require("souther").setup()` with `jar`, `java` and `adequacy` options.
-- Unit tests (plenary) and CI for Neovim stable and nightly.
+- `:checkhealth souther` reporting Neovim version, server discovery and Java runtime.
+- Unit tests (plenary) and CI for Neovim stable and nightly, with all actions pinned to commit SHAs.

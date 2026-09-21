@@ -6,17 +6,25 @@ on:
     tags: ["v*"]
   pull_request:
 
+# Least privilege: nothing here writes to the repository.
+permissions:
+  contents: read
+
+# Every action is pinned to a full commit SHA (the tag it resolves to is in
+# the trailing comment). Dependabot keeps the pins current; see
+# .github/dependabot.yml.
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: JohnnyMorganz/stylua-action@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: JohnnyMorganz/stylua-action@479972f01e665acfcba96ada452c36608bdbbb5e # v4.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          version: latest
+          version: v2.5.2
           args: --check lua plugin ftplugin lsp tests
-      - uses: lunarmodules/luacheck@v1
+      - uses: lunarmodules/luacheck@cc089e3f65acdd1ef8716cc73a3eca24a6b845e4 # v1.2.0
         with:
           args: lua plugin ftplugin lsp tests
 
@@ -27,8 +35,8 @@ jobs:
       matrix:
         neovim: [stable, nightly]
     steps:
-      - uses: actions/checkout@v4
-      - uses: rhysd/action-setup-vim@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: rhysd/action-setup-vim@febef33995d6649302e9d88dda81e071b68f16a7 # v1.6.1
         with:
           neovim: true
           version: ${{ matrix.neovim }}
@@ -41,16 +49,16 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: rhysd/action-setup-vim@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: rhysd/action-setup-vim@febef33995d6649302e9d88dda81e071b68f16a7 # v1.6.1
         with:
           neovim: true
           version: stable
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           distribution: temurin
           java-version: "25"
-      - uses: Homebrew/actions/setup-homebrew@master
+      - uses: Homebrew/actions/setup-homebrew@848c272c7bfe984a197bd4d16383f4c106ec61e6 # main 2026-09-20
       - name: Install souther
         run: brew install souther-lang/souther/souther
       - name: Run integration tests

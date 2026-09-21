@@ -86,6 +86,13 @@ handles those works unchanged. To tweak one:
 vim.api.nvim_set_hl(0, "@lsp.type.typeParameter.souther", { link = "@type" })
 ```
 
+## Troubleshooting
+
+Run `:checkhealth souther`. It reports the Neovim version, how the server
+will be launched (`souther lsp` or a configured jar), whether the jar and a
+Java 25 runtime are found, and the current options. Please paste its output
+when filing an issue.
+
 ## Development
 
 ```sh
