@@ -12,6 +12,7 @@ CONTENTS                                                    *souther-contents*
   4. Options .................................... |souther-options|
   5. Server discovery ........................... |souther-server|
   6. Highlighting ............................... |souther-highlight|
+  7. Health check ............................... |souther-health|
 
 ==============================================================================
 1. INTRODUCTION                                         *souther-introduction*
@@ -100,5 +101,16 @@ handles. To override one for Souther only: >lua
     vim.api.nvim_set_hl(0, "@lsp.type.typeParameter.souther", { link = "@type" })
 <
 Use |:Inspect| on a token to see which group it received.
+
+==============================================================================
+7. HEALTH CHECK                                               *souther-health*
+
+>vim
+    :checkhealth souther
+<
+Reports the Neovim version, how the server will be launched (`souther lsp`
+or the configured jar), whether the jar and a Java 25 runtime can be found,
+and the current options. Nothing is started. Include its output when filing
+an issue.
 
 vim:tw=78:ts=8:ft=help:norl:
