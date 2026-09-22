@@ -8,11 +8,12 @@ CONTENTS                                                    *souther-contents*
 
   1. Introduction ............................... |souther-introduction|
   2. Requirements ............................... |souther-requirements|
-  3. Setup ...................................... |souther-setup|
-  4. Configuration .............................. |souther-configuration|
-  5. Workspace root ............................. |souther-root|
-  6. Highlighting ............................... |souther-highlight|
-  7. Health check ............................... |souther-health|
+  3. Compatibility .............................. |souther-compatibility|
+  4. Setup ...................................... |souther-setup|
+  5. Configuration .............................. |souther-configuration|
+  6. Workspace root ............................. |souther-root|
+  7. Highlighting ............................... |souther-highlight|
+  8. Health check ............................... |souther-health|
 
 ==============================================================================
 1. INTRODUCTION                                         *souther-introduction*
@@ -34,7 +35,13 @@ actions and formatting all come from the server.
   (see |souther-configuration|).
 
 ==============================================================================
-3. SETUP                                                       *souther-setup*
+3. COMPATIBILITY                                       *souther-compatibility*
+
+  souther.nvim    souther / souther-lsp    Neovim ~
+  0.1.x           0.2.x                    0.11+
+
+==============================================================================
+4. SETUP                                                       *souther-setup*
 
 Installing the plugin is enough. With lazy.nvim: >lua
     { "dskst/souther.nvim", ft = "souther" }
@@ -46,7 +53,7 @@ place at startup even when nothing else is loaded yet.
 There is no `setup()` function. See |souther-configuration|.
 
 ==============================================================================
-4. CONFIGURATION                                       *souther-configuration*
+5. CONFIGURATION                                       *souther-configuration*
 
 Everything about the client goes through |vim.lsp.config()|, before the first
 `.sou` buffer is opened: >lua
@@ -83,7 +90,7 @@ function on purpose, so that `cmd_env`, `cmd_cwd` and Neovim's own "not
 executable" report all keep working, and so that |:checkhealth| can show it.
 
 ==============================================================================
-5. WORKSPACE ROOT                                               *souther-root*
+6. WORKSPACE ROOT                                               *souther-root*
 
 souther-lsp does not read build files. It walks its root recursively, collects
 every `*.sou` under it and compiles them as one flat module set. An import
@@ -118,7 +125,7 @@ To replace the rule, override `root_dir`. It takes precedence over
     })
 <
 ==============================================================================
-6. HIGHLIGHTING                                            *souther-highlight*
+7. HIGHLIGHTING                                            *souther-highlight*
 
 Semantic tokens are applied to the standard |lsp-semantic-highlight| groups
 (`@lsp.type.keyword`, `@lsp.type.string`, `@lsp.type.type`, ...), which link
@@ -140,7 +147,7 @@ win wherever they land. Disable it the usual way: >lua
 Use |:Inspect| on a token to see which group it actually received.
 
 ==============================================================================
-7. HEALTH CHECK                                               *souther-health*
+8. HEALTH CHECK                                               *souther-health*
 
 >vim
     :checkhealth souther

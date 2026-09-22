@@ -28,6 +28,12 @@ land.
   [release](https://github.com/souther-lang/souther/releases) and point `cmd`
   at it (see [Configuration](#configuration)). The jar needs a JDK 25.
 
+## Compatibility
+
+| souther.nvim | souther / souther-lsp | Neovim |
+| ------------ | --------------------- | ------ |
+| 0.1.x        | 0.2.x                 | 0.11+  |
+
 ## Installation
 
 With [lazy.nvim](https://github.com/folke/lazy.nvim):
