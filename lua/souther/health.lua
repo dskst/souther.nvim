@@ -117,6 +117,17 @@ local function check_server()
   end
 
   local cmd = conf.cmd
+  if cmd == nil then
+    -- Not a configuration choice anyone can make: `vim.lsp.config` merges
+    -- tables, so a key can only be missing if the definition never carried it.
+    health.error("the resolved `souther` config has no `cmd`", {
+      "Stale Lua module cache: run `:lua vim.loader.reset()`, or restart Neovim",
+      "Two copies on the runtimepath: :lua =vim.api.nvim_get_runtime_file('lua/souther/server.lua', true)",
+      "Or set one yourself: vim.lsp.config('souther', { cmd = { 'souther', 'lsp' } })",
+    })
+    return
+  end
+
   if type(cmd) ~= "table" then
     health.warn("cmd is a " .. type(cmd) .. ", so it cannot be checked here")
     return
