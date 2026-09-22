@@ -1,5 +1,11 @@
 # souther.nvim
 
+[![CI](https://github.com/dskst/souther.nvim/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/dskst/souther.nvim/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/github/v/tag/dskst/souther.nvim?sort=semver&label=version)](https://github.com/dskst/souther.nvim/releases)
+[![Souther](https://img.shields.io/badge/Souther-0.2.x-AD8E4F)](https://souther-lang.org)
+[![Neovim](https://img.shields.io/badge/Neovim-0.11%2B-57A143?logo=neovim&logoColor=white)](https://neovim.io)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Neovim support for the [Souther](https://souther-lang.org) language: filetype
 detection, buffer settings, a fallback syntax file, and a wired-up
 `souther-lsp` for highlighting, diagnostics, go-to-definition, hover,
