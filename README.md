@@ -1,14 +1,17 @@
 # souther.nvim
 
 Neovim support for the [Souther](https://souther-lang.org) language: filetype
-detection, buffer settings, and a wired-up `souther-lsp` for highlighting,
-diagnostics, go-to-definition, hover, completion, rename, code actions and
-formatting.
+detection, buffer settings, a fallback syntax file, and a wired-up
+`souther-lsp` for highlighting, diagnostics, go-to-definition, hover,
+completion, rename, code actions and formatting.
 
-Highlighting comes entirely from the language server's semantic tokens, which
-cover keywords, strings, numbers, comments and operators as well as
-context-aware identifier roles (type vs. value, parameter vs. local). No
-regex syntax file or Tree-sitter grammar is bundled.
+Highlighting comes from the language server's semantic tokens, which know
+context-aware identifier roles (type vs. value, parameter vs. local) that no
+regex can. A small `syntax/souther.vim` covers the cases the server cannot:
+the seconds before a JVM process attaches, buffers it never attaches to (diff
+views, fuzzy-finder previews), and machines where `souther` is not installed.
+Semantic tokens are applied at a higher priority, so they win wherever they
+land.
 
 ## Requirements
 
@@ -22,59 +25,83 @@ regex syntax file or Tree-sitter grammar is bundled.
   ```
 
   Alternatively, download `souther-lsp.jar` from a
-  [release](https://github.com/souther-lang/souther/releases) and point the
-  plugin at it (see [Configuration](#configuration)). The jar needs a JDK 25.
+  [release](https://github.com/souther-lang/souther/releases) and point `cmd`
+  at it (see [Configuration](#configuration)). The jar needs a JDK 25.
 
 ## Installation
 
 With [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
-{ "dskst/souther.nvim" }
+{ "dskst/souther.nvim", ft = "souther" }
 ```
 
 That is enough: the plugin registers the filetype and enables the server on
-load. Open any `.sou` file and `:LspInfo` should show `souther` attached.
+load. Open any `.sou` file and `:checkhealth vim.lsp` should show `souther`
+attached.
 
 ## Configuration
 
-`setup()` is optional. The defaults match the VS Code extension.
-
-```lua
-require("souther").setup({
-  -- Path to souther-lsp.jar. When set, the plugin runs
-  -- `java -Xss4m -jar <jar>` instead of `souther lsp`.
-  jar = nil,
-
-  -- Java executable to use with `jar`. Defaults to `java` on PATH.
-  java = nil,
-
-  -- How much of what `example` rows cover to measure.
-  -- "off" | "witness" | "all"
-  adequacy = "off",
-})
-```
-
-To change anything else about the client (capabilities, `on_attach`, extra
-root markers), extend the config the standard way before the first `.sou`
-buffer is opened:
+There is no `setup()`. Everything about the client is configured through
+`vim.lsp.config`, the same as for any other language server, before the first
+`.sou` buffer is opened:
 
 ```lua
 vim.lsp.config("souther", {
-  root_markers = { "souther.toml", ".git" },
-  on_attach = function(client, bufnr) ... end,
+  -- How much of what `example` rows cover the server measures.
+  -- "witness" | "all"; anything else, "off" included, disables it.
+  init_options = { souther = { adequacy = "witness" } },
+
+  on_attach = function(client, bufnr) end,
 })
 ```
 
-## How the server is found
+To run the server from a jar instead of the `souther` launcher, `jar_cmd`
+builds the command — including `-Xss4m`, which the compiler requires:
 
-1. `setup({ jar = ... })` was given → `java -Xss4m -jar <jar>`
-2. `souther` is executable on `PATH` → `souther lsp`
-3. Neither → a one-time warning with install hints, then Neovim's own
-   "not executable" error. The buffer stays editable.
+```lua
+vim.lsp.config("souther", {
+  cmd = require("souther").jar_cmd("~/tools/souther-lsp.jar", {
+    java = "/opt/jdk25/bin/java",   -- optional; defaults to `java` on PATH
+    jvm_args = { "-Xmx2g" },        -- optional; appended after -Xss4m
+  }),
+})
+```
 
-`-Xss4m` is the stack size the compiler requires, not a tuning knob. The
-`souther` launcher sets it for itself, so it is only added for the jar route.
+`cmd` is an ordinary list, so `cmd_env`, `cmd_cwd` and everything else
+Neovim does with a command keep working.
+
+## Workspace root
+
+souther-lsp does not read build files. It walks its root recursively, collects
+every `*.sou` under it, and compiles them as one flat module set — so an
+import only resolves when both files sit under the same root, and a root that
+is too narrow is reported as an unknown module rather than degrading quietly.
+The root is captured once at `initialize`; the server does not handle
+`workspace/didChangeWorkspaceFolders`.
+
+The plugin therefore resolves the *widest* sane boundary, not the nearest one:
+
+1. The nearest ancestor holding a build file (`settings.gradle(.kts)`,
+   `pom.xml`, `build.gradle(.kts)`), then upward while each parent also holds
+   one — in a Maven or Gradle multi-module tree that is the aggregator, so
+   sibling modules resolve against each other.
+2. Never above the `.git` directory.
+3. With no build file anywhere, the `.git` directory.
+4. Otherwise nothing, and the client runs without a workspace, which is the
+   right answer for a lone `.sou` file.
+
+`:checkhealth souther` reports the root the current buffer would get. To use
+your own rule, override `root_dir` — it takes precedence over `root_markers`,
+so setting markers alone would have no effect here:
+
+```lua
+vim.lsp.config("souther", {
+  root_dir = function(bufnr, on_dir)
+    on_dir(vim.fs.root(bufnr, { "souther.toml", ".git" }))
+  end,
+})
+```
 
 ## Highlight groups
 
@@ -86,12 +113,9 @@ handles those works unchanged. To tweak one:
 vim.api.nvim_set_hl(0, "@lsp.type.typeParameter.souther", { link = "@type" })
 ```
 
-## Troubleshooting
-
-Run `:checkhealth souther`. It reports the Neovim version, how the server
-will be launched (`souther lsp` or a configured jar), whether the jar and a
-Java 25 runtime are found, and the current options. Please paste its output
-when filing an issue.
+The fallback syntax file uses `souther*` groups linked to the standard `Keyword`,
+`String`, `Type`, `Comment` and friends. Use `:Inspect` to see which group a
+given token actually received.
 
 ## Development
 
@@ -106,12 +130,15 @@ into `.tests/` on first run.
 
 ## Roadmap
 
-- A generated `syntax/souther.vim` as a fallback for the seconds before the
-  server attaches, if that gap turns out to matter in practice.
 - Tree-sitter queries once a `tree-sitter-souther` grammar exists upstream.
-  Nothing in this plugin changes when it does; the grammar layers underneath
-  the semantic tokens.
-- Upstreaming the server definition to nvim-lspconfig.
+  Nothing else in this plugin changes when it does; the grammar layers
+  between the fallback syntax and the semantic tokens.
+- Upstreaming `lsp/souther.lua` to nvim-lspconfig. It is deliberately plain
+  data so that it merges predictably if both end up on the runtimepath; what
+  stays here afterwards is the filetype, buffer settings, syntax fallback and
+  health check.
+- Reporting `fake` / `example` / `examples for` as keywords in souther-lsp
+  itself, so every editor benefits rather than each one carrying the rule.
 
 ## License
 

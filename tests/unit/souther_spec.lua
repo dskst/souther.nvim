@@ -3,9 +3,9 @@
 
 local eq = assert.are.same
 
-local function open_sou_buffer()
+local function open_sou_buffer(lines)
   local path = vim.fn.tempname() .. ".sou"
-  vim.fn.writefile({ "// sample", "behavior sumAll : (xs: List<Int>) -> Int" }, path)
+  vim.fn.writefile(lines or { "// sample", "behavior sumAll : (xs: List<Int>) -> Int" }, path)
   vim.cmd.edit(path)
   return vim.api.nvim_get_current_buf()
 end
@@ -33,92 +33,111 @@ describe("ftplugin", function()
   end)
 end)
 
-describe("server.argv", function()
-  local server = require("souther.server")
-  local souther = require("souther")
-  local original_executable = vim.fn.executable
-  local original_notify_once = vim.notify_once
+describe("syntax fallback", function()
+  --- Name of the syntax group the character at (row, col) ended up in.
+  local function group_at(row, col)
+    return vim.fn.synIDattr(vim.fn.synID(row, col, 1), "name")
+  end
 
-  before_each(function()
-    souther.options = { java = nil, jar = nil, adequacy = "off" }
+  it("loads without the language server", function()
+    open_sou_buffer()
+    eq("souther", vim.b.current_syntax)
   end)
 
-  after_each(function()
-    vim.fn.executable = original_executable
-    vim.notify_once = original_notify_once
+  it("highlights declarations, comments, strings and numbers", function()
+    open_sou_buffer({
+      "// a comment",
+      'let price = 100m ++ "text"',
+    })
+    eq("southerComment", group_at(1, 1))
+    eq("southerDeclaration", group_at(2, 1))
+    eq("southerNumber", group_at(2, 13))
+    eq("southerString", group_at(2, 22))
   end)
 
-  it("uses `souther lsp` when souther is on PATH", function()
-    vim.fn.executable = function(name)
-      return name == "souther" and 1 or 0
-    end
-    eq({ "souther", "lsp" }, server.argv())
-  end)
-
-  it("prefers the configured jar over PATH", function()
-    vim.fn.executable = function()
-      return 1
-    end
-    souther.setup({ jar = "/opt/souther/souther-lsp.jar" })
-    eq({ "java", "-Xss4m", "-jar", "/opt/souther/souther-lsp.jar" }, server.argv())
-  end)
-
-  it("uses the configured java with the jar", function()
-    souther.setup({ jar = "/opt/souther/souther-lsp.jar", java = "/opt/jdk25/bin/java" })
-    eq({ "/opt/jdk25/bin/java", "-Xss4m", "-jar", "/opt/souther/souther-lsp.jar" }, server.argv())
-  end)
-
-  it("expands ~ in the jar path", function()
-    souther.setup({ jar = "~/souther-lsp.jar" })
-    local argv = server.argv()
-    eq(vim.fn.expand("~/souther-lsp.jar"), argv[4])
-  end)
-
-  it("warns once and still returns `souther lsp` when nothing is installed", function()
-    vim.fn.executable = function()
-      return 0
-    end
-    local warnings = {}
-    vim.notify_once = function(msg, level)
-      table.insert(warnings, { msg = msg, level = level })
-    end
-    eq({ "souther", "lsp" }, server.argv())
-    eq(1, #warnings)
-    eq(vim.log.levels.WARN, warnings[1].level)
-    assert.truthy(warnings[1].msg:find("brew install", 1, true))
+  it("highlights the contextual keywords the server reports as variables", function()
+    open_sou_buffer({
+      "fake findByEmail",
+      "examples for example.core.Member",
+    })
+    eq("southerDeclaration", group_at(1, 1))
+    eq("southerDeclaration", group_at(2, 1))
+    eq("southerExamplesFor", group_at(2, 10))
+    -- `example` inside a qualified module name stays a plain name.
+    eq("", group_at(2, 14))
   end)
 end)
 
-describe("setup", function()
-  local souther = require("souther")
+describe("server.jar_cmd", function()
+  local server = require("souther.server")
 
-  before_each(function()
-    souther.options = { java = nil, jar = nil, adequacy = "off" }
+  it("builds a java -jar command with the required stack size", function()
+    eq(
+      { "java", "-Xss4m", "-jar", "/opt/souther/souther-lsp.jar" },
+      server.jar_cmd("/opt/souther/souther-lsp.jar")
+    )
   end)
 
-  it("pushes adequacy into the LSP config", function()
-    souther.setup({ adequacy = "witness" })
-    eq({ souther = { adequacy = "witness" } }, vim.lsp.config.souther.init_options)
+  it("uses the configured java", function()
+    eq("/opt/jdk25/bin/java", server.jar_cmd("/x.jar", { java = "/opt/jdk25/bin/java" })[1])
   end)
 
-  it("keeps defaults when called with no options", function()
-    souther.setup()
-    eq("off", souther.options.adequacy)
-    eq(nil, souther.options.jar)
+  it("appends extra jvm args after the required ones", function()
+    eq(
+      { "java", "-Xss4m", "-Xmx2g", "-jar", "/x.jar" },
+      server.jar_cmd("/x.jar", { jvm_args = { "-Xmx2g" } })
+    )
   end)
 
-  it("rejects an unknown adequacy level", function()
+  it("expands ~ in the jar path", function()
+    eq(vim.fn.expand("~/souther-lsp.jar"), server.jar_cmd("~/souther-lsp.jar")[4])
+  end)
+
+  it("rejects a missing jar path", function()
     assert.has_error(function()
-      souther.setup({ adequacy = "everything" })
+      server.jar_cmd(nil)
     end)
   end)
 end)
 
+describe("server.is_default_cmd", function()
+  local server = require("souther.server")
+
+  it("recognises the shipped default", function()
+    assert.is_true(server.is_default_cmd({ "souther", "lsp" }))
+  end)
+
+  it("rejects anything else", function()
+    assert.is_false(server.is_default_cmd({ "souther", "lsp", "--verbose" }))
+    assert.is_false(server.is_default_cmd(server.jar_cmd("/x.jar")))
+    assert.is_false(server.is_default_cmd(nil))
+  end)
+end)
+
+describe("public API", function()
+  local souther = require("souther")
+
+  it("exposes jar_cmd and root", function()
+    eq({ "java", "-Xss4m", "-jar", "/x.jar" }, souther.jar_cmd("/x.jar"))
+    assert.is_function(souther.root)
+  end)
+
+  it("does not ship a setup() function", function()
+    eq(nil, souther.setup)
+  end)
+end)
+
 describe("lsp config", function()
-  it("targets the souther filetype and build-file roots", function()
+  it("ships a plain list cmd so cmd_env and cmd_cwd keep working", function()
     local config = vim.lsp.config.souther
     eq({ "souther" }, config.filetypes)
-    eq({ { "pom.xml", "build.gradle.kts", "build.gradle" }, ".git" }, config.root_markers)
-    assert.is_function(config.cmd)
+    eq({ "souther", "lsp" }, config.cmd)
+    eq({ souther = { adequacy = "off" } }, config.init_options)
+  end)
+
+  it("resolves the root with a function rather than root_markers", function()
+    local config = vim.lsp.config.souther
+    eq(nil, config.root_markers)
+    assert.is_function(config.root_dir)
   end)
 end)
