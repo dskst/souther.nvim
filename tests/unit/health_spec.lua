@@ -158,6 +158,9 @@ describe("health", function()
   it("reports the workspace root of the current buffer", function()
     local base = vim.fs.normalize(vim.fn.tempname())
     vim.fn.mkdir(base .. "/proj/src/main/souther", "p")
+    -- macOS resolves `/var` to `/private/var` when `:edit` records the buffer
+    -- name, so the expected root has to be the real path. See root_spec.
+    base = vim.fs.normalize(vim.uv.fs_realpath(base) or base)
     vim.fn.writefile({ "" }, base .. "/proj/pom.xml")
     local path = base .. "/proj/src/main/souther/a.sou"
     vim.fn.writefile({ "// x" }, path)
