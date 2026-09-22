@@ -33,3 +33,9 @@ All notable changes to this project are documented here. The format follows
   module set and does not read build files, so the nearest build file is the
   wrong answer in a multi-module tree.
 - There is no `setup()`. `vim.lsp.config` is the single configuration surface.
+- `lsp/souther.lua` asserts the values it pulls out of `lua/souther/`. A nil
+  raises nothing on its own -- `vim.deepcopy(nil)` is nil and a nil value drops
+  its key from the table -- so the client would otherwise start with no `cmd`
+  at all, visible only as "cmd is a nil" in `:checkhealth souther`. That check
+  now reports a missing `cmd` as an error, with the stale module cache and the
+  duplicate runtimepath entry named as the causes.

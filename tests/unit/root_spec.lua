@@ -19,7 +19,10 @@ local function tree(spec)
       vim.fn.writefile({ "" }, path)
     end
   end
-  return base
+  -- On macOS `$TMPDIR` sits under `/var`, a symlink to `/private/var`, and
+  -- `:edit` records the resolved path in the buffer name. Describe the tree by
+  -- its real path so expectations match whichever side built the string.
+  return vim.fs.normalize(vim.uv.fs_realpath(base) or base)
 end
 
 describe("root.find", function()

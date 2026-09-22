@@ -49,6 +49,16 @@ local function set_cmd(cmd)
   vim.lsp.config("souther", { cmd = cmd })
 end
 
+-- `vim.lsp.config` merges tables, so a missing `cmd` cannot be arranged
+-- through it. Stand a plain table in its place instead.
+local function check_with_config(conf)
+  local original = vim.lsp.config
+  vim.lsp.config = { souther = conf }
+  local ok, err = pcall(health.check)
+  vim.lsp.config = original
+  assert(ok, err)
+end
+
 describe("health", function()
   before_each(function()
     set_cmd(vim.deepcopy(server.DEFAULT_CMD))
@@ -115,6 +125,17 @@ describe("health", function()
     assert.truthy(has("error", "not executable: souther-lsp-wrapper"))
   end)
 
+  it("errors when the resolved config has no cmd", function()
+    check_with_config({ init_options = { souther = { adequacy = "off" } } })
+    assert.truthy(has("error", "no `cmd`"))
+  end)
+
+  it("warns when cmd is a function it cannot inspect", function()
+    check_with_config({ cmd = function() end })
+    assert.truthy(has("warn", "cmd is a function"))
+    assert.is_false(vim.tbl_contains(levels(), "error"))
+  end)
+
   it("always reports the adequacy option", function()
     vim.lsp.config("souther", { init_options = { souther = { adequacy = "witness" } } })
     vim.fn.executable = function()
@@ -137,6 +158,9 @@ describe("health", function()
   it("reports the workspace root of the current buffer", function()
     local base = vim.fs.normalize(vim.fn.tempname())
     vim.fn.mkdir(base .. "/proj/src/main/souther", "p")
+    -- macOS resolves `/var` to `/private/var` when `:edit` records the buffer
+    -- name, so the expected root has to be the real path. See root_spec.
+    base = vim.fs.normalize(vim.uv.fs_realpath(base) or base)
     vim.fn.writefile({ "" }, base .. "/proj/pom.xml")
     local path = base .. "/proj/src/main/souther/a.sou"
     vim.fn.writefile({ "// x" }, path)
