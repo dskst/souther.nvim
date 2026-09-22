@@ -23,6 +23,9 @@ discovery, Neovim-specific glue.
 
 - Lua formatted with [stylua](https://github.com/JohnnyMorganz/StyLua)
   (`.stylua.toml`), linted with [luacheck](https://github.com/lunarmodules/luacheck).
+  Neither ships with Neovim: `brew install stylua luacheck` on macOS, or grab
+  a stylua release binary and `luarocks install luacheck`. CI pins stylua
+  v2.5.2 and luacheck v1.2.0.
 - Comments and documentation in English.
 - Option names mirror the VS Code extension's settings where one exists.
 
