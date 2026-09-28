@@ -63,7 +63,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-      - uses: Homebrew/actions/setup-homebrew@848c272c7bfe984a197bd4d16383f4c106ec61e6 # main 2026-09-20
+      - uses: Homebrew/actions/setup-homebrew@e99025eb970cfa124b8284a35463d87426917478 # main 2026-09-20
       - name: Install souther
         run: brew install souther-lang/souther/souther
       - name: Run integration tests
