@@ -2,7 +2,7 @@
 NVIM_BIN ?= nvim
 MINIMAL_INIT := tests/minimal_init.lua
 
-.PHONY: test test-integration lint format
+.PHONY: test test-integration verify-root lint format
 
 # Unit tests: no souther or JDK required.
 test:
@@ -13,6 +13,10 @@ test:
 test-integration:
 	$(NVIM_BIN) --headless -u $(MINIMAL_INIT) \
 		-c "PlenaryBustedDirectory tests/integration { minimal_init = '$(MINIMAL_INIT)', sequential = true }"
+
+# Every directory tree up to a bound, checked against the documented root rule.
+verify-root:
+	$(NVIM_BIN) -u NONE -l tests/verify/root.lua
 
 lint:
 	luacheck lua plugin ftplugin ftdetect lsp tests
