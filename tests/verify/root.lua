@@ -68,7 +68,7 @@ for dir in vim.fs.parents(base .. "/x") do
   end
 end
 
--- One directory per level, L1 at the top. Markers are switched in place.
+-- Markers are switched in place across shapes.
 local rel, dirs, level_of = {}, {}, {}
 for i = 1, DEPTH do
   rel[i] = (rel[i - 1] and rel[i - 1] .. "/" or "") .. "L" .. i

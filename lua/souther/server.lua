@@ -9,7 +9,7 @@ local M = {}
 --- What `lsp/souther.lua` ships. The `souther` launcher brings its own JVM.
 M.DEFAULT_CMD = { "souther", "lsp" }
 
---- What souther 0.5.0 states a Java has to be given to run its compiler
+--- JVM arguments souther 0.5.0 requires to run its compiler
 --- (`requiredJvmArgs` in the jar's META-INF/souther/tooling.json).
 M.REQUIRED_JVM_ARGS = { "-Xss4m", "-XX:+UseCompactObjectHeaders" }
 
