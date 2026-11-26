@@ -13,11 +13,12 @@ completion, rename, code actions and formatting.
 
 Highlighting comes from the language server's semantic tokens, which know
 context-aware identifier roles (type vs. value, parameter vs. local) that no
-regex can. A small `syntax/souther.vim` covers the cases the server cannot:
-the seconds before a JVM process attaches, buffers it never attaches to (diff
+regex can. A fallback syntax file covers the cases the server cannot: the
+seconds before a JVM process attaches, buffers it never attaches to (diff
 views, fuzzy-finder previews), and machines where `souther` is not installed.
-Semantic tokens are applied at a higher priority, so they win wherever they
-land.
+Its rules come from the TextMate grammar that each souther release ships, so
+they follow upstream rather than a hand-written copy. Semantic tokens are
+applied at a higher priority, so they win wherever they land.
 
 ## Requirements
 
@@ -126,9 +127,11 @@ handles those works unchanged. To tweak one:
 vim.api.nvim_set_hl(0, "@lsp.type.typeParameter.souther", { link = "@type" })
 ```
 
-The fallback syntax file uses `souther*` groups linked to the standard `Keyword`,
-`String`, `Type`, `Comment` and friends. Use `:Inspect` to see which group a
-given token actually received.
+The fallback syntax file names each group `souther` followed by its
+TextMate scope in CamelCase. For example, the scope `keyword.operator.souther`
+gives the group `southerKeywordOperator`, which links to the standard
+`Operator` group. `:syntax list` in a Souther buffer shows every group. Use
+`:Inspect` to see which group a given token actually received.
 
 ## Development
 
@@ -136,7 +139,12 @@ given token actually received.
 make test              # unit tests, no souther needed
 make test-integration  # needs `souther` on PATH or SOUTHER_LSP_JAR=...
 make lint              # stylua --check + luacheck
+make grammar           # refresh syntax/souther.tmLanguage.json from a release
 ```
+
+`make grammar` downloads the grammar for `SOUTHER_VERSION` (default `0.5.0`)
+and replaces the copy in `syntax/` only after it matches the release's
+`SHA256SUMS`.
 
 Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim), cloned
 into `.tests/` on first run.

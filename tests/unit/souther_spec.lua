@@ -34,9 +34,28 @@ describe("ftplugin", function()
 end)
 
 describe("syntax fallback", function()
-  --- Name of the syntax group the character at (row, col) ended up in.
+  -- Neovim's default colors link Keyword to Statement, Number to Constant and
+  -- so on. Defining each standard group directly, as a colorscheme does, stops
+  -- the link chain at the group the syntax file chose.
+  before_each(function()
+    for _, group in ipairs({
+      "Boolean",
+      "Comment",
+      "Error",
+      "Identifier",
+      "Keyword",
+      "Number",
+      "Operator",
+      "SpecialChar",
+      "String",
+      "Type",
+    }) do
+      vim.api.nvim_set_hl(0, group, {})
+    end
+  end)
+
   local function group_at(row, col)
-    return vim.fn.synIDattr(vim.fn.synID(row, col, 1), "name")
+    return vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.synID(row, col, 1)), "name")
   end
 
   it("loads without the language server", function()
@@ -44,27 +63,93 @@ describe("syntax fallback", function()
     eq("souther", vim.b.current_syntax)
   end)
 
-  it("highlights declarations, comments, strings and numbers", function()
-    open_sou_buffer({
-      "// a comment",
-      'let price = 100m ++ "text"',
-    })
-    eq("southerComment", group_at(1, 1))
-    eq("southerDeclaration", group_at(2, 1))
-    eq("southerNumber", group_at(2, 13))
-    eq("southerString", group_at(2, 22))
+  it("highlights a comment to the end of the line", function()
+    open_sou_buffer({ "// a comment" })
+    eq("Comment", group_at(1, 1))
+    eq("Comment", group_at(1, 12))
   end)
 
-  it("highlights the contextual keywords the server reports as variables", function()
-    open_sou_buffer({
-      "fake findByEmail",
-      "examples for example.core.Member",
+  it("keeps a string with an escaped quote in it as one string", function()
+    open_sou_buffer({ [[let s = "a\"b" ++ t]] })
+    eq("String", group_at(1, 9))
+    eq("SpecialChar", group_at(1, 11))
+    eq("SpecialChar", group_at(1, 12))
+    eq("String", group_at(1, 13))
+    eq("String", group_at(1, 14))
+    eq("Operator", group_at(1, 16))
+  end)
+
+  it("marks an unknown escape as an error", function()
+    open_sou_buffer({ [["a\qb"]] })
+    eq("Error", group_at(1, 3))
+    eq("Error", group_at(1, 4))
+    eq("String", group_at(1, 5))
+  end)
+
+  it("highlights decimals and integers", function()
+    open_sou_buffer({ "let x = 1.5m + 42" })
+    eq("Number", group_at(1, 9))
+    eq("Number", group_at(1, 10))
+    eq("Number", group_at(1, 12))
+    eq("Operator", group_at(1, 14))
+    eq("Number", group_at(1, 16))
+  end)
+
+  it("highlights booleans", function()
+    open_sou_buffer({ "let ok = true" })
+    eq("Boolean", group_at(1, 10))
+  end)
+
+  it("highlights declaration keywords", function()
+    open_sou_buffer({ "behavior sumAll : (xs: List<Int>) -> Int" })
+    eq("Keyword", group_at(1, 1))
+    eq("", group_at(1, 10))
+  end)
+
+  it("highlights `depends on` as one keyword", function()
+    open_sou_buffer({ "depends on member" })
+    eq("Keyword", group_at(1, 1))
+    eq("Keyword", group_at(1, 9))
+    eq("", group_at(1, 12))
+  end)
+
+  it("highlights control keywords", function()
+    open_sou_buffer({ "if ok then 1 else 2" })
+    eq("Keyword", group_at(1, 1))
+    eq("Keyword", group_at(1, 7))
+  end)
+
+  it("highlights ASCII and non-ASCII type variables", function()
+    open_sou_buffer({ "behavior id : (x: 'a) -> 'αβ" })
+    eq("Identifier", group_at(1, 19))
+    eq("Identifier", group_at(1, 20))
+    eq("", group_at(1, 21))
+    eq("Identifier", group_at(1, 26))
+    eq("Identifier", group_at(1, 29))
+  end)
+
+  it("highlights a builtin type only where it qualifies a name", function()
+    open_sou_buffer({ "List.map", "Rational.x", "xs: List<Int>" })
+    eq("Type", group_at(1, 1))
+    eq("Type", group_at(2, 1))
+    eq("", group_at(3, 5))
+  end)
+
+  it("highlights operators", function()
+    open_sou_buffer({ "a -> b >-> c <?> d |> e" })
+    eq("Operator", group_at(1, 3))
+    eq("Operator", group_at(1, 8))
+    eq("Operator", group_at(1, 14))
+    eq("Operator", group_at(1, 20))
+  end)
+
+  it("rejects a grammar that uses a regex construct it cannot translate", function()
+    local ok, err = pcall(require("souther.syntax").commands, {
+      patterns = { { include = "#annotation" } },
+      repository = { annotation = { name = "keyword.souther", match = "(?<=@)name" } },
     })
-    eq("southerDeclaration", group_at(1, 1))
-    eq("southerDeclaration", group_at(2, 1))
-    eq("southerExamplesFor", group_at(2, 10))
-    -- `example` inside a qualified module name stays a plain name.
-    eq("", group_at(2, 14))
+    assert.is_false(ok)
+    assert.matches("(?<=", err, 1, true)
   end)
 end)
 

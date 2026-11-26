@@ -135,10 +135,33 @@ handles. To override one for Souther only: >lua
 <
 `syntax/souther.vim` is a fallback for the cases the server cannot cover: the
 seconds before a JVM process attaches, buffers it never attaches to (diff
-views, fuzzy-finder previews), and machines without `souther` installed. Its
-groups are named `souther*` and link to `Keyword`, `String`, `Type`,
-`Comment` and friends. Semantic tokens are applied at a higher priority and
-win wherever they land. Disable it the usual way: >lua
+views, fuzzy-finder previews), and machines without `souther` installed.
+Semantic tokens are applied at a higher priority and win wherever they land.
+
+The fallback rules come from `syntax/souther.tmLanguage.json`, the TextMate
+grammar that the souther release ships, kept byte for byte. The plugin
+translates it to Vim syntax when the first Souther buffer loads.
+
+                                                    *souther-highlight-groups*
+Each fallback group is named `souther` followed by its TextMate scope in
+CamelCase, without the `.souther` suffix. For example, the scope
+`keyword.operator.souther` gives the group `southerKeywordOperator`. Each
+group links to the standard group for the longest matching scope prefix:
+
+  Scope prefix                 Links to ~
+  comment                      Comment
+  string                       String
+  constant.character.escape    SpecialChar
+  invalid                      Error
+  constant.numeric             Number
+  constant.language.boolean    Boolean
+  keyword                      Keyword
+  keyword.operator             Operator
+  support.class                Type
+  variable                     Identifier
+
+`:syntax list` in a Souther buffer shows every group. Disable the fallback
+the usual way: >lua
     vim.api.nvim_create_autocmd("FileType", {
       pattern = "souther",
       callback = function() vim.bo.syntax = "" end,
