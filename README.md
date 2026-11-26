@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/dskst/souther.nvim/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/dskst/souther.nvim/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/github/v/tag/dskst/souther.nvim?sort=semver&label=version)](https://github.com/dskst/souther.nvim/releases)
-[![Souther](https://img.shields.io/badge/Souther-0.2.x-AD8E4F)](https://souther-lang.org)
+[![Souther](https://img.shields.io/badge/Souther-0.5.x-AD8E4F)](https://souther-lang.org)
 [![Neovim](https://img.shields.io/badge/Neovim-0.11%2B-57A143?logo=neovim&logoColor=white)](https://neovim.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -37,9 +37,10 @@ applied at a higher priority, so they win wherever they land.
 
 ## Compatibility
 
-| souther.nvim | souther / souther-lsp | Neovim |
-| ------------ | --------------------- | ------ |
-| 0.1.x        | 0.2.x                 | 0.11+  |
+| souther.nvim      | souther / souther-lsp | Neovim |
+| ----------------- | --------------------- | ------ |
+| main (unreleased) | 0.5.x                 | 0.11+  |
+| 0.1.x             | 0.2.x                 | 0.11+  |
 
 ## Installation
 
@@ -158,8 +159,6 @@ into `.tests/` on first run.
   data so that it merges predictably if both end up on the runtimepath; what
   stays here afterwards is the filetype, buffer settings, syntax fallback and
   health check.
-- Reporting `fake` / `example` / `examples for` as keywords in souther-lsp
-  itself, so every editor benefits rather than each one carrying the rule.
 
 ## License
 

@@ -37,8 +37,9 @@ actions and formatting all come from the server.
 ==============================================================================
 3. COMPATIBILITY                                       *souther-compatibility*
 
-  souther.nvim    souther / souther-lsp    Neovim ~
-  0.1.x           0.2.x                    0.11+
+  souther.nvim         souther / souther-lsp    Neovim ~
+  main (unreleased)    0.5.x                    0.11+
+  0.1.x                0.2.x                    0.11+
 
 ==============================================================================
 4. SETUP                                                       *souther-setup*
