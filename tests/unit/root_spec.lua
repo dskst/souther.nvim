@@ -62,6 +62,15 @@ describe("root.find", function()
     eq(base .. "/outer/repo", root.find(base .. "/outer/repo/src/main/souther/a.sou"))
   end)
 
+  it("ignores a build file above the .git directory", function()
+    local base = tree({
+      "outer/pom.xml",
+      "outer/repo/.git/HEAD",
+      "outer/repo/src/a.sou",
+    })
+    eq(base .. "/outer/repo", root.find(base .. "/outer/repo/src/a.sou"))
+  end)
+
   it("falls back to the .git directory when there is no build file", function()
     local base = tree({ "repo/.git/HEAD", "repo/src/a.sou" })
     eq(base .. "/repo", root.find(base .. "/repo/src/a.sou"))

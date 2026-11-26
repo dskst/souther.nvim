@@ -3,6 +3,39 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- Targets souther 0.5.x. `jar_cmd()` adds `-XX:+UseCompactObjectHeaders`
+  after `-Xss4m`. Together they are the JVM arguments that souther 0.5.0
+  states as required.
+- The fallback syntax now comes from the TextMate grammar that souther
+  releases ship. `syntax/souther.tmLanguage.json` holds the 0.5.0 copy byte
+  for byte, and `lua/souther/syntax.lua` translates it when the first Souther
+  buffer loads. `make grammar` replaces the copy after checking it against
+  the release's `SHA256SUMS`.
+- Fallback groups are named after their TextMate scopes, for example
+  `southerKeywordOperator`. An override of an old name such as
+  `southerDeclaration` no longer applies. `if`, `then`, `else`, `match`,
+  `guard` and `unreachable` link to `Keyword` instead of `Conditional`.
+- The fallback marks a builtin type such as `List` as `Type` only when it
+  qualifies a name, as in `List.map`. `Rational` joins the list.
+
+### Removed
+
+- The fallback's own rule for `fake`, `example` and `examples for`.
+  souther-lsp 0.5.0 reports them as keywords.
+
+### Fixed
+
+- The workspace root no longer climbs above the `.git` directory when the
+  only build file sits outside the repository. A layout such as
+  `~/work/pom.xml` with `~/work/app/.git` now gives `~/work/app`, not
+  `~/work`.
+- In the fallback, the escape in `"a\"b"` is highlighted as an escape rather
+  than an error, and `1.5m` is highlighted as one number, dot included.
+
 ## [0.1.0] - 2026-09-22
 
 ### Added

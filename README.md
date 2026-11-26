@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/dskst/souther.nvim/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/dskst/souther.nvim/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/github/v/tag/dskst/souther.nvim?sort=semver&label=version)](https://github.com/dskst/souther.nvim/releases)
-[![Souther](https://img.shields.io/badge/Souther-0.2.x-AD8E4F)](https://souther-lang.org)
+[![Souther](https://img.shields.io/badge/Souther-0.5.x-AD8E4F)](https://souther-lang.org)
 [![Neovim](https://img.shields.io/badge/Neovim-0.11%2B-57A143?logo=neovim&logoColor=white)](https://neovim.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -13,11 +13,12 @@ completion, rename, code actions and formatting.
 
 Highlighting comes from the language server's semantic tokens, which know
 context-aware identifier roles (type vs. value, parameter vs. local) that no
-regex can. A small `syntax/souther.vim` covers the cases the server cannot:
-the seconds before a JVM process attaches, buffers it never attaches to (diff
+regex can. A fallback syntax file covers the cases the server cannot: the
+seconds before a JVM process attaches, buffers it never attaches to (diff
 views, fuzzy-finder previews), and machines where `souther` is not installed.
-Semantic tokens are applied at a higher priority, so they win wherever they
-land.
+Its rules come from the TextMate grammar that each souther release ships, so
+they follow upstream rather than a hand-written copy. Semantic tokens are
+applied at a higher priority, so they win wherever they land.
 
 ## Requirements
 
@@ -36,9 +37,10 @@ land.
 
 ## Compatibility
 
-| souther.nvim | souther / souther-lsp | Neovim |
-| ------------ | --------------------- | ------ |
-| 0.1.x        | 0.2.x                 | 0.11+  |
+| souther.nvim      | souther / souther-lsp | Neovim |
+| ----------------- | --------------------- | ------ |
+| main (unreleased) | 0.5.x                 | 0.11+  |
+| 0.1.x             | 0.2.x                 | 0.11+  |
 
 ## Installation
 
@@ -69,13 +71,14 @@ vim.lsp.config("souther", {
 ```
 
 To run the server from a jar instead of the `souther` launcher, `jar_cmd`
-builds the command — including `-Xss4m`, which the compiler requires:
+builds the command. It always includes `-Xss4m` and
+`-XX:+UseCompactObjectHeaders`, the JVM arguments that souther 0.5.0 requires:
 
 ```lua
 vim.lsp.config("souther", {
   cmd = require("souther").jar_cmd("~/tools/souther-lsp.jar", {
     java = "/opt/jdk25/bin/java",   -- optional; defaults to `java` on PATH
-    jvm_args = { "-Xmx2g" },        -- optional; appended after -Xss4m
+    jvm_args = { "-Xmx2g" },        -- optional; appended after the required ones
   }),
 })
 ```
@@ -125,9 +128,11 @@ handles those works unchanged. To tweak one:
 vim.api.nvim_set_hl(0, "@lsp.type.typeParameter.souther", { link = "@type" })
 ```
 
-The fallback syntax file uses `souther*` groups linked to the standard `Keyword`,
-`String`, `Type`, `Comment` and friends. Use `:Inspect` to see which group a
-given token actually received.
+The fallback syntax file names each group `souther` followed by its
+TextMate scope in CamelCase. For example, the scope `keyword.operator.souther`
+gives the group `southerKeywordOperator`, which links to the standard
+`Operator` group. `:syntax list` in a Souther buffer shows every group. Use
+`:Inspect` to see which group a given token actually received.
 
 ## Development
 
@@ -135,7 +140,12 @@ given token actually received.
 make test              # unit tests, no souther needed
 make test-integration  # needs `souther` on PATH or SOUTHER_LSP_JAR=...
 make lint              # stylua --check + luacheck
+make grammar           # refresh syntax/souther.tmLanguage.json from a release
 ```
+
+`make grammar` downloads the grammar for `SOUTHER_VERSION` (default `0.5.0`)
+and replaces the copy in `syntax/` only after it matches the release's
+`SHA256SUMS`.
 
 Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim), cloned
 into `.tests/` on first run.
@@ -149,8 +159,6 @@ into `.tests/` on first run.
   data so that it merges predictably if both end up on the runtimepath; what
   stays here afterwards is the filetype, buffer settings, syntax fallback and
   health check.
-- Reporting `fake` / `example` / `examples for` as keywords in souther-lsp
-  itself, so every editor benefits rather than each one carrying the rule.
 
 ## License
 

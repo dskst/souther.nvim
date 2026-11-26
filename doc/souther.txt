@@ -37,8 +37,9 @@ actions and formatting all come from the server.
 ==============================================================================
 3. COMPATIBILITY                                       *souther-compatibility*
 
-  souther.nvim    souther / souther-lsp    Neovim ~
-  0.1.x           0.2.x                    0.11+
+  souther.nvim         souther / souther-lsp    Neovim ~
+  main (unreleased)    0.5.x                    0.11+
+  0.1.x                0.2.x                    0.11+
 
 ==============================================================================
 4. SETUP                                                       *souther-setup*
@@ -80,10 +81,10 @@ require("souther").jar_cmd({jar} [, {opts}]) ~
         })
 <
     `~` in {jar} is expanded. {opts.java} defaults to `java` on `PATH` and
-    needs a JDK 25. `-Xss4m` is always included: it is the stack size the
-    Souther compiler documents as required, not a tuning knob, and the
-    `souther` launcher sets the same value for itself. {opts.jvm_args} is
-    appended after it.
+    needs a JDK 25. The command always includes `-Xss4m` and
+    `-XX:+UseCompactObjectHeaders`, the JVM arguments that souther 0.5.0
+    states as required in the jar's `META-INF/souther/tooling.json`. They are
+    not tuning knobs. {opts.jvm_args} is appended after them.
 
 The shipped `cmd` is the list `{ "souther", "lsp" }`. It is a list and not a
 function on purpose, so that `cmd_env`, `cmd_cwd` and Neovim's own "not
@@ -135,10 +136,33 @@ handles. To override one for Souther only: >lua
 <
 `syntax/souther.vim` is a fallback for the cases the server cannot cover: the
 seconds before a JVM process attaches, buffers it never attaches to (diff
-views, fuzzy-finder previews), and machines without `souther` installed. Its
-groups are named `souther*` and link to `Keyword`, `String`, `Type`,
-`Comment` and friends. Semantic tokens are applied at a higher priority and
-win wherever they land. Disable it the usual way: >lua
+views, fuzzy-finder previews), and machines without `souther` installed.
+Semantic tokens are applied at a higher priority and win wherever they land.
+
+The fallback rules come from `syntax/souther.tmLanguage.json`, the TextMate
+grammar that the souther release ships, kept byte for byte. The plugin
+translates it to Vim syntax when the first Souther buffer loads.
+
+                                                    *souther-highlight-groups*
+Each fallback group is named `souther` followed by its TextMate scope in
+CamelCase, without the `.souther` suffix. For example, the scope
+`keyword.operator.souther` gives the group `southerKeywordOperator`. Each
+group links to the standard group for the longest matching scope prefix:
+
+  Scope prefix                 Links to ~
+  comment                      Comment
+  string                       String
+  constant.character.escape    SpecialChar
+  invalid                      Error
+  constant.numeric             Number
+  constant.language.boolean    Boolean
+  keyword                      Keyword
+  keyword.operator             Operator
+  support.class                Type
+  variable                     Identifier
+
+`:syntax list` in a Souther buffer shows every group. Disable the fallback
+the usual way: >lua
     vim.api.nvim_create_autocmd("FileType", {
       pattern = "souther",
       callback = function() vim.bo.syntax = "" end,
