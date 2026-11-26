@@ -9,6 +9,12 @@ local eq = assert.are.same
 local jar = os.getenv("SOUTHER_LSP_JAR")
 local available = (jar ~= nil and jar ~= "") or vim.fn.executable("souther") == 1
 
+-- `$TMPDIR` can sit behind a symlink (`/var` is `/private/var` on macOS), and
+-- the client reports the resolved path.
+local function real(path)
+  return vim.uv.fs_realpath(path)
+end
+
 local function wait_for(pred, timeout_ms)
   return vim.wait(timeout_ms or 20000, pred, 100)
 end
@@ -66,7 +72,7 @@ describe("souther-lsp integration", function()
 
     it("attaches with the pom.xml directory as root", function()
       local client = wait_for_client(buf)
-      eq(vim.fs.normalize(dir), vim.fs.normalize(client.root_dir))
+      eq(real(dir), real(client.root_dir))
     end)
 
     it("returns a keyword semantic token for `behavior`", function()
@@ -111,7 +117,7 @@ describe("souther-lsp integration", function()
 
     it("takes the aggregator as root, not the module the file sits in", function()
       local client = wait_for_client(buf)
-      eq(vim.fs.normalize(dir), vim.fs.normalize(client.root_dir))
+      eq(real(dir), real(client.root_dir))
     end)
 
     it("resolves an import of a sibling module", function()
