@@ -56,18 +56,16 @@ It takes about 1.5 seconds. Through make, every failure exits with status 2, so 
 
 ## Known result at the sync commit
 
-At the sync commit, the output has exactly one FAIL kind:
+At the sync commit, the check passes at depth 4 and at depth 5:
 
 ```
-FAIL above the .git entry (rule 2): 4380 calls. Fewest markers:
-  L1/settings.gradle
-  L1/L2/.git/
-  root.find("L1/L2/L3/L4/a.sou") returned L1; the rule gives L1/L2
+verify-root: depth 4, 6480 trees, 12960 calls to root.find
+PASS: every answer matches the documented rule
 ```
 
-This is a real bug, not yet fixed. When a repository (the directory with `.git`) holds no build file and a directory outside it does, `find` returns a directory above `.git` and breaks rule 2. For example, with `~/work/pom.xml` and `~/work/app/.git`, and no build file in `app`, the root becomes the whole of `~/work`. The cause is the `vim.fs.find` call that looks for the nearest build file: it keeps searching past `.git`. All 4,380 calls are in that situation: no build file at or below the `.git` entry, and one above it. The count matches a hand count of those layouts.
+Any FAIL line means that your change broke the rule, or that the model needs an update. See "Reading a counterexample" below.
 
-If the output shows another FAIL kind, or a different count, your change altered the behavior the rule describes. Once the bug is fixed the check passes. Update this section to PASS then.
+The check first found a bug, fixed in `cc77e20`. When a repository (the directory with `.git`) held no build file and a directory outside it did, `find` returned a directory above `.git`. With `~/work/pom.xml` and `~/work/app/.git`, the root was the whole of `~/work`. That showed as `FAIL above the .git entry (rule 2): 4380 calls`. The unit test "ignores a build file above the .git directory" in `tests/unit/root_spec.lua` now pins the fix.
 
 ## Reading a counterexample
 
@@ -100,15 +98,15 @@ Update README.md, doc/souther.txt and `expected()` in `tests/verify/root.lua` (a
 | --- | --- |
 | `SPEC_BUILD_FILES` and the list drift check | `M.BUILD_FILES` in `lua/souther/root.lua` |
 | Rule 1 in `expected()` (start at the nearest build file and move up) | the `vim.fs.find(M.BUILD_FILES, ...)` call and the `while` loop in `M.find`, and `has_build_file` |
-| Rules 2 and 3 in `expected()` (stop at `.git`, fall back to `.git`) | `git_dir`, and the handling of `ceiling` in `M.find` |
+| Rules 2 and 3 in `expected()` (stop at `.git`, fall back to `.git`) | `git_dir`, the `vim.fs.relpath(ceiling, nearest)` check that drops a build file outside the `.git` directory, and the `outermost ~= ceiling` loop condition in `M.find` |
 | Rule 4 in `expected()`, and the start path | the empty-path check and the `isdirectory` branch in `M.find` |
 
-Sync commit: `00cecd2012bc4fabc5cbb01b579067d526fb1c6b`
+Sync commit: `cc77e2005c5a46a49250ec268dbe4dded3fb4fae`
 
 At this commit, the check was confirmed to describe the code in the table above. To see whether that code changed since then, run:
 
 ```sh
-git diff 00cecd2012bc4fabc5cbb01b579067d526fb1c6b -- lua/souther/root.lua README.md doc/souther.txt
+git diff cc77e2005c5a46a49250ec268dbe4dded3fb4fae -- lua/souther/root.lua README.md doc/souther.txt
 ```
 
 If there is a diff, confirm that the check still describes the code. If needed, fix `expected()` and the table, run `make verify-root`, and update the known result. Move the sync commit forward only after all of that is done.
