@@ -67,7 +67,7 @@ function M.find(path)
   local ceiling = git_dir(start)
 
   local nearest = vim.fs.find(M.BUILD_FILES, { path = start, upward = true, limit = 1 })[1]
-  if not nearest then
+  if not nearest or (ceiling and not vim.fs.relpath(ceiling, nearest)) then
     return ceiling
   end
 

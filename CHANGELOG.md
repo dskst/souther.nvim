@@ -29,6 +29,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- The workspace root no longer climbs above the `.git` directory when the
+  only build file sits outside the repository. A layout such as
+  `~/work/pom.xml` with `~/work/app/.git` now gives `~/work/app`, not
+  `~/work`.
 - In the fallback, the escape in `"a\"b"` is highlighted as an escape rather
   than an error, and `1.5m` is highlighted as one number, dot included.
 
