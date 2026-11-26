@@ -80,10 +80,10 @@ require("souther").jar_cmd({jar} [, {opts}]) ~
         })
 <
     `~` in {jar} is expanded. {opts.java} defaults to `java` on `PATH` and
-    needs a JDK 25. `-Xss4m` is always included: it is the stack size the
-    Souther compiler documents as required, not a tuning knob, and the
-    `souther` launcher sets the same value for itself. {opts.jvm_args} is
-    appended after it.
+    needs a JDK 25. The command always includes `-Xss4m` and
+    `-XX:+UseCompactObjectHeaders`, the JVM arguments that souther 0.5.0
+    states as required in the jar's `META-INF/souther/tooling.json`. They are
+    not tuning knobs. {opts.jvm_args} is appended after them.
 
 The shipped `cmd` is the list `{ "souther", "lsp" }`. It is a list and not a
 function on purpose, so that `cmd_env`, `cmd_cwd` and Neovim's own "not

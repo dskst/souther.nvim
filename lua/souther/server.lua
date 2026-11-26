@@ -9,9 +9,9 @@ local M = {}
 --- What `lsp/souther.lua` ships. The `souther` launcher brings its own JVM.
 M.DEFAULT_CMD = { "souther", "lsp" }
 
---- Stack size the Souther compiler documents as required. Not a tuning knob:
---- the `souther` launcher sets the same value for itself.
-M.REQUIRED_JVM_ARGS = { "-Xss4m" }
+--- What souther 0.5.0 states a Java has to be given to run its compiler
+--- (`requiredJvmArgs` in the jar's META-INF/souther/tooling.json).
+M.REQUIRED_JVM_ARGS = { "-Xss4m", "-XX:+UseCompactObjectHeaders" }
 
 M.INSTALL_HINT = table.concat({
   "souther.nvim: `souther` was not found on PATH.",
@@ -22,7 +22,7 @@ M.INSTALL_HINT = table.concat({
 
 ---@class souther.JarOpts
 ---@field java string|nil        Java executable. Defaults to `java` on PATH. Needs a JDK 25.
----@field jvm_args string[]|nil  Extra JVM arguments, appended after `-Xss4m`.
+---@field jvm_args string[]|nil  Extra JVM arguments, appended after the required ones.
 
 --- Build a `cmd` that runs souther-lsp from a jar.
 ---

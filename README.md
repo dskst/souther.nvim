@@ -69,13 +69,14 @@ vim.lsp.config("souther", {
 ```
 
 To run the server from a jar instead of the `souther` launcher, `jar_cmd`
-builds the command — including `-Xss4m`, which the compiler requires:
+builds the command. It always includes `-Xss4m` and
+`-XX:+UseCompactObjectHeaders`, the JVM arguments that souther 0.5.0 requires:
 
 ```lua
 vim.lsp.config("souther", {
   cmd = require("souther").jar_cmd("~/tools/souther-lsp.jar", {
     java = "/opt/jdk25/bin/java",   -- optional; defaults to `java` on PATH
-    jvm_args = { "-Xmx2g" },        -- optional; appended after -Xss4m
+    jvm_args = { "-Xmx2g" },        -- optional; appended after the required ones
   }),
 })
 ```

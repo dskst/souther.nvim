@@ -71,9 +71,9 @@ end)
 describe("server.jar_cmd", function()
   local server = require("souther.server")
 
-  it("builds a java -jar command with the required stack size", function()
+  it("builds a java -jar command with the JVM args the compiler requires", function()
     eq(
-      { "java", "-Xss4m", "-jar", "/opt/souther/souther-lsp.jar" },
+      { "java", "-Xss4m", "-XX:+UseCompactObjectHeaders", "-jar", "/opt/souther/souther-lsp.jar" },
       server.jar_cmd("/opt/souther/souther-lsp.jar")
     )
   end)
@@ -84,13 +84,14 @@ describe("server.jar_cmd", function()
 
   it("appends extra jvm args after the required ones", function()
     eq(
-      { "java", "-Xss4m", "-Xmx2g", "-jar", "/x.jar" },
+      { "java", "-Xss4m", "-XX:+UseCompactObjectHeaders", "-Xmx2g", "-jar", "/x.jar" },
       server.jar_cmd("/x.jar", { jvm_args = { "-Xmx2g" } })
     )
   end)
 
   it("expands ~ in the jar path", function()
-    eq(vim.fn.expand("~/souther-lsp.jar"), server.jar_cmd("~/souther-lsp.jar")[4])
+    local cmd = server.jar_cmd("~/souther-lsp.jar")
+    eq(vim.fn.expand("~/souther-lsp.jar"), cmd[#cmd])
   end)
 
   it("rejects a missing jar path", function()
@@ -118,7 +119,10 @@ describe("public API", function()
   local souther = require("souther")
 
   it("exposes jar_cmd and root", function()
-    eq({ "java", "-Xss4m", "-jar", "/x.jar" }, souther.jar_cmd("/x.jar"))
+    eq(
+      { "java", "-Xss4m", "-XX:+UseCompactObjectHeaders", "-jar", "/x.jar" },
+      souther.jar_cmd("/x.jar")
+    )
     assert.is_function(souther.root)
   end)
 
